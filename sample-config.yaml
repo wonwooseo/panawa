@@ -1,0 +1,8 @@
+# item codes to fetch data
+codes:
+  - "0000"
+
+# data api info
+api:
+  kamis:
+    url: "http://www.kamis.or.kr/service/price/xml.do?action=periodProductList"
