@@ -27,7 +27,6 @@ func main() {
 	viper.SetConfigFile(cfgPath)
 	viper.ReadInConfig()
 
-	country := viper.GetString("country")
 	lang := viper.GetString("language")
 	item := viper.GetStringMapString("item")
 	region := viper.GetStringMapString("region")
@@ -35,18 +34,18 @@ func main() {
 
 	tmpl := template.Must(template.ParseFiles("resolver.tmpl"))
 
-	if err := os.MkdirAll(fmt.Sprintf("%s/%s", country, lang), os.ModePerm); err != nil {
+	if err := os.MkdirAll(lang, os.ModePerm); err != nil {
 		panic(err)
 	}
 
-	itemGo, err := os.Create(fmt.Sprintf("%s/%s/item.go", country, lang))
+	itemGo, err := os.Create(fmt.Sprintf("%s/item.go", lang))
 	if err != nil {
 		panic(err)
 	}
 	defer itemGo.Close()
 	var itemBuf bytes.Buffer
 	if err := tmpl.Execute(&itemBuf, templateArg{
-		Pkg:           fmt.Sprintf("%s%s", country, lang),
+		Pkg:           lang,
 		Type:          "Item",
 		CodeLocaleMap: item,
 	}); err != nil {
@@ -58,14 +57,14 @@ func main() {
 	}
 	itemGo.Write(itemFmt)
 
-	regionGo, err := os.Create(fmt.Sprintf("%s/%s/region.go", country, lang))
+	regionGo, err := os.Create(fmt.Sprintf("%s/region.go", lang))
 	if err != nil {
 		panic(err)
 	}
 	defer regionGo.Close()
 	var regionBuf bytes.Buffer
 	if err := tmpl.Execute(&regionBuf, templateArg{
-		Pkg:           fmt.Sprintf("%s%s", country, lang),
+		Pkg:           lang,
 		Type:          "Region",
 		CodeLocaleMap: region,
 	}); err != nil {
@@ -77,14 +76,14 @@ func main() {
 	}
 	regionGo.Write(regionFmt)
 
-	marketGo, err := os.Create(fmt.Sprintf("%s/%s/market.go", country, lang))
+	marketGo, err := os.Create(fmt.Sprintf("%s/market.go", lang))
 	if err != nil {
 		panic(err)
 	}
 	defer marketGo.Close()
 	var marketBuf bytes.Buffer
 	if err := tmpl.Execute(&marketBuf, templateArg{
-		Pkg:           fmt.Sprintf("%s%s", country, lang),
+		Pkg:           lang,
 		Type:          "Market",
 		CodeLocaleMap: market,
 	}); err != nil {
