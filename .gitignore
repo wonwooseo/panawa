@@ -1,0 +1,14 @@
+.DS_Store
+
+# executables
+batch
+
+# local configs
+config
+
+# code resolver generation codes
+code/gen/*
+!code/gen/gen.go
+!code/gen/run.go
+!code/gen/resolver.tmpl
+!code/gen/sample.yaml
