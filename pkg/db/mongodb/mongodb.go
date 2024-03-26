@@ -45,15 +45,23 @@ func NewRepository(baseLogger zerolog.Logger) *Repository {
 }
 
 func (r *Repository) SaveDatePrice(ctx context.Context, p *model.Price) error {
-	// TODO
+	coll := r.cli.Database(r.database).Collection("date_prices")
+	_, err := coll.InsertOne(ctx, p)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (r *Repository) SaveRegionalMarketPrices(ctx context.Context, ps []*model.Price) error {
-	// TODO
+	coll := r.cli.Database(r.database).Collection("regional_market_prices")
+	var input []interface{} = make([]interface{}, len(ps))
+	for i, p := range ps {
+		input[i] = p
+	}
+	_, err := coll.InsertMany(ctx, input)
+	if err != nil {
+		return err
+	}
 	return nil
-}
-
-func (r *Repository) Close() error {
-	return r.cli.Disconnect(context.Background())
 }

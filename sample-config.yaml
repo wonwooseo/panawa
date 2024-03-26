@@ -12,5 +12,5 @@ api:
 
 # db connection info
 mongodb:
-  url: mongodb://localhost:27017
+  url: mongodb://admin:admin@localhost:27017
   database: panawa
