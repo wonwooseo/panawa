@@ -1,7 +1,14 @@
-# item codes to fetch data
+# fetch subcommand settings
 fetch:
   codes:
     - "0000"
+
+# backfill subcommand settings
+backfill:
+  codes:
+    - "0000"
+  startdate: "2024-03-17"
+  enddate: "2024-03-24"
 
 # data api info
 api:

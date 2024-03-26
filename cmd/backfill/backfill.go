@@ -1,8 +1,18 @@
 package backfill
 
 import (
+	"context"
+	"time"
+
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/wonwooseo/panawa/pkg/code"
+	"github.com/wonwooseo/panawa/pkg/db"
+	"github.com/wonwooseo/panawa/pkg/db/mongodb"
+	"github.com/wonwooseo/panawa/pkg/price"
+	"github.com/wonwooseo/panawa/pkg/price/kamis"
 )
 
 func Command(baseLogger zerolog.Logger) *cobra.Command {
@@ -12,8 +22,48 @@ func Command(baseLogger zerolog.Logger) *cobra.Command {
 		Long:  "backfill data of previous dates",
 		Run: func(cmd *cobra.Command, args []string) {
 			logger := baseLogger.With().Str("caller", "cmd/backfill").Logger()
-			logger.Info().Msg("not implemented")
-			// TODO: get previous data
+
+			var regionCodeResolver code.Resolver = code.NewRegionCodeResolver()
+			var priceFetcher price.DataClient = kamis.NewDataClient(baseLogger, regionCodeResolver)
+			var repository db.Repository = mongodb.NewRepository(baseLogger)
+
+			kstLoc := time.FixedZone("KST", 9*60*60) // UTC+09:00
+			sDate, err := time.ParseInLocation("2006-01-02", viper.GetString("backfill.startdate"), kstLoc)
+			if err != nil {
+				logger.Error().Err(err).Msg("failed to parse start date")
+				return
+			}
+			eDate, err := time.ParseInLocation("2006-01-02", viper.GetString("backfill.enddate"), kstLoc)
+			if err != nil {
+				logger.Error().Err(err).Msg("failed to parse end date")
+				return
+			}
+
+			fetchCodes := viper.GetStringSlice("backfill.codes")
+			for _, itemCode := range fetchCodes {
+				cDate := sDate
+				for cDate.Unix() <= eDate.Unix() {
+					datePrice, regionalMarketPrices, err := priceFetcher.GetDatePrices(context.Background(), cDate, itemCode)
+					if err != nil {
+						logger.Error().Str("item_code", itemCode).Err(err).Msg("failed to fetch price data")
+						return
+					}
+
+					if err := repository.SaveDatePrice(context.Background(), datePrice); err != nil {
+						logger.Error().Str("item_code", itemCode).Err(err).Msg("failed to save date price to DB")
+						return
+					}
+					for region, marketPrices := range regionalMarketPrices {
+						if err := repository.SaveRegionalMarketPrices(context.Background(), marketPrices); err != nil {
+							logger.Error().Str("item_code", itemCode).Str("region_code", region).Err(err).Msg("failed to save regional market prices to DB")
+							return
+						}
+					}
+
+					logger.Info().Str("item_code", itemCode).Str("date", cDate.Format("2006-01-02")).Msg("saved prices to DB")
+					cDate = cDate.AddDate(0, 0, 1)
+				}
+			}
 		},
 	}
 }
