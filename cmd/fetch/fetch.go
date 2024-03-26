@@ -28,11 +28,11 @@ func Command(baseLogger zerolog.Logger) *cobra.Command {
 			var repository db.Repository = mongodb.NewRepository(baseLogger)
 
 			kstLoc := time.FixedZone("KST", 9*60*60) // UTC+09:00
-			kstNow := time.Now().UTC().In(kstLoc)
+			kstYesterday := time.Now().UTC().In(kstLoc).AddDate(0, 0, -1)
 
 			fetchCodes := viper.GetStringSlice("fetch.codes")
 			for _, itemCode := range fetchCodes {
-				datePrice, regionalMarketPrices, err := priceFetcher.GetDatePrices(context.Background(), kstNow, itemCode)
+				datePrice, regionalMarketPrices, err := priceFetcher.GetDatePrices(context.Background(), kstYesterday, itemCode)
 				if err != nil {
 					logger.Error().Str("item_code", itemCode).Err(err).Msg("failed to fetch price data")
 					return

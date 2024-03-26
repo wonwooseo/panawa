@@ -87,7 +87,7 @@ func (c *DataClient) GetDatePrices(ctx context.Context, date time.Time, itemCode
 	}
 	parsed := apiResponse{}
 	if err := json.Unmarshal(respBytes, &parsed); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w: %s", err, string(respBytes))
 	}
 
 	if parsed.Data.ErrorCode != statusSuccess {
@@ -124,7 +124,6 @@ func (c *DataClient) GetDatePrices(ctx context.Context, date time.Time, itemCode
 			c.logger.Warn().Any("data", price).Err(err).Msg("failed to convert price from response data to int")
 			continue
 		}
-		c.logger.Info().Str("region", regionCode).Str("market", marketCode).Int("price", priceInt).Msg("price data")
 
 		// for date price
 		if priceInt < tempDatePrice.Low {
