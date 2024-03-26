@@ -6,8 +6,11 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/wonwooseo/panawa/pkg/code"
+	"github.com/wonwooseo/panawa/pkg/db"
+	"github.com/wonwooseo/panawa/pkg/db/mongodb"
 	"github.com/wonwooseo/panawa/pkg/price"
 	"github.com/wonwooseo/panawa/pkg/price/kamis"
 )
@@ -22,16 +25,31 @@ func Command(baseLogger zerolog.Logger) *cobra.Command {
 
 			var regionCodeResolver code.Resolver = code.NewRegionCodeResolver()
 			var priceFetcher price.DataClient = kamis.NewDataClient(baseLogger, regionCodeResolver)
+			var repository db.Repository = mongodb.NewRepository(baseLogger)
 
-			datePrice, regionalMarketPrices, err := priceFetcher.GetDatePrices(context.Background(), time.Date(2024, 3, 20, 6, 0, 0, 0, time.UTC), "0000")
-			if err != nil {
-				logger.Error().Err(err).Msg("failed to fetch price data")
-				return
-			}
+			kstLoc := time.FixedZone("KST", 9*60*60) // UTC+09:00
+			kstNow := time.Now().UTC().In(kstLoc)
 
-			logger.Info().Any("date_price", datePrice).Send()
-			for region, marketPrices := range regionalMarketPrices {
-				logger.Info().Str("region_code", region).Any("market_prices", marketPrices).Send()
+			fetchCodes := viper.GetStringSlice("fetch.codes")
+			for _, itemCode := range fetchCodes {
+				datePrice, regionalMarketPrices, err := priceFetcher.GetDatePrices(context.Background(), kstNow, itemCode)
+				if err != nil {
+					logger.Error().Str("item_code", itemCode).Err(err).Msg("failed to fetch price data")
+					return
+				}
+
+				if err := repository.SaveDatePrice(context.Background(), datePrice); err != nil {
+					logger.Error().Str("item_code", itemCode).Err(err).Msg("failed to save date price to DB")
+					return
+				}
+				for region, marketPrices := range regionalMarketPrices {
+					if err := repository.SaveRegionalMarketPrices(context.Background(), marketPrices); err != nil {
+						logger.Error().Str("item_code", itemCode).Str("region_code", region).Err(err).Msg("failed to save regional market prices to DB")
+						return
+					}
+				}
+
+				logger.Info().Str("item_code", itemCode).Msg("saved prices to DB")
 			}
 		},
 	}

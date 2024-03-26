@@ -1,8 +1,16 @@
 # item codes to fetch data
-codes:
-  - "0000"
+fetch:
+  codes:
+    - "0000"
 
 # data api info
 api:
   kamis:
     url: "http://www.kamis.or.kr/service/price/xml.do?action=periodProductList"
+    key: "111"
+    id: "222"
+
+# db connection info
+mongodb:
+  url: mongodb://localhost:27017
+  database: panawa

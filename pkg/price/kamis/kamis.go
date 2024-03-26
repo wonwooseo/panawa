@@ -34,7 +34,7 @@ func NewDataClient(baseLogger zerolog.Logger, regionCodeResolver code.Resolver) 
 	apiCertKey := viper.GetString("api.kamis.key")
 	apiCertID := viper.GetString("api.kamis.id")
 	return &DataClient{
-		logger: baseLogger.With().Str("caller", "data/kamis").Logger(),
+		logger: baseLogger.With().Str("caller", "price/kamis").Logger(),
 		client: &http.Client{
 			Timeout: 60 * time.Second,
 		},
