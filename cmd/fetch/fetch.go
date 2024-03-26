@@ -29,6 +29,8 @@ func Command(baseLogger zerolog.Logger) *cobra.Command {
 
 			kstLoc := time.FixedZone("KST", 9*60*60) // UTC+09:00
 			kstYesterday := time.Now().UTC().In(kstLoc).AddDate(0, 0, -1)
+			// use truncated time
+			kstYesterday = time.Date(kstYesterday.Year(), kstYesterday.Month(), kstYesterday.Day(), 0, 0, 0, 0, kstLoc)
 
 			fetchCodes := viper.GetStringSlice("fetch.codes")
 			for _, itemCode := range fetchCodes {

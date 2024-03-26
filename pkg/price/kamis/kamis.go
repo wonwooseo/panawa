@@ -162,23 +162,25 @@ func (c *DataClient) GetDatePrices(ctx context.Context, date time.Time, itemCode
 	}
 
 	datePrice := &model.Price{
-		ItemCode:   itemCode,
-		Low:        tempDatePrice.Low,
-		Average:    int(tempDatePrice.Sum / tempDatePrice.Count),
-		High:       tempDatePrice.High,
-		UpdateTime: responseTime,
+		ItemCode:       itemCode,
+		DateUnix:       date.Unix(),
+		Low:            tempDatePrice.Low,
+		Average:        int(tempDatePrice.Sum / tempDatePrice.Count),
+		High:           tempDatePrice.High,
+		UpdateTimeUnix: responseTime.Unix(),
 	}
 	regionalMarketPrices := map[string][]*model.Price{}
 	for regionCode, marketCodeTempPriceMap := range tempRegionalMarketPrices {
 		for marketCode, tempPrice := range marketCodeTempPriceMap {
 			regionalMarketPrices[regionCode] = append(regionalMarketPrices[regionCode], &model.Price{
-				ItemCode:   itemCode,
-				Low:        tempPrice.Low,
-				Average:    int(tempPrice.Sum / tempPrice.Count),
-				High:       tempPrice.High,
-				RegionCode: &regionCode, // safe to take pointer of loop var after go 1.22
-				MarketCode: &marketCode, // safe to take pointer of loop var after go 1.22
-				UpdateTime: responseTime,
+				ItemCode:       itemCode,
+				DateUnix:       date.Unix(),
+				Low:            tempPrice.Low,
+				Average:        int(tempPrice.Sum / tempPrice.Count),
+				High:           tempPrice.High,
+				RegionCode:     &regionCode, // safe to take pointer of loop var after go 1.22
+				MarketCode:     &marketCode, // safe to take pointer of loop var after go 1.22
+				UpdateTimeUnix: responseTime.Unix(),
 			})
 		}
 	}

@@ -2,10 +2,12 @@ package mongodb
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -46,7 +48,8 @@ func NewRepository(baseLogger zerolog.Logger) *Repository {
 
 func (r *Repository) SaveDatePrice(ctx context.Context, p *model.Price) error {
 	coll := r.cli.Database(r.database).Collection("date_prices")
-	_, err := coll.InsertOne(ctx, p)
+	id := fmt.Sprintf("price#%s#%d", p.ItemCode, p.DateUnix)
+	_, err := coll.UpdateByID(ctx, id, bson.D{{"$set", p}}, options.Update().SetUpsert(true))
 	if err != nil {
 		return err
 	}
@@ -55,11 +58,12 @@ func (r *Repository) SaveDatePrice(ctx context.Context, p *model.Price) error {
 
 func (r *Repository) SaveRegionalMarketPrices(ctx context.Context, ps []*model.Price) error {
 	coll := r.cli.Database(r.database).Collection("regional_market_prices")
-	var input []interface{} = make([]interface{}, len(ps))
+	input := make([]mongo.WriteModel, len(ps))
 	for i, p := range ps {
-		input[i] = p
+		id := fmt.Sprintf("price#%s#%d#%s#%s", p.ItemCode, p.DateUnix, *p.RegionCode, *p.MarketCode)
+		input[i] = mongo.NewUpdateOneModel().SetFilter(bson.D{{"_id", id}}).SetUpdate(bson.D{{"$set", p}}).SetUpsert(true)
 	}
-	_, err := coll.InsertMany(ctx, input)
+	_, err := coll.BulkWrite(ctx, input)
 	if err != nil {
 		return err
 	}
