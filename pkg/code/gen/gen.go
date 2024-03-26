@@ -4,13 +4,14 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"go/format"
 	"os"
 	"text/template"
 
 	"github.com/spf13/viper"
 )
+
+const pkgName = "code"
 
 type templateArg struct {
 	Pkg           string
@@ -27,25 +28,20 @@ func main() {
 	viper.SetConfigFile(cfgPath)
 	viper.ReadInConfig()
 
-	lang := viper.GetString("language")
 	item := viper.GetStringMapString("item")
 	region := viper.GetStringMapString("region")
 	market := viper.GetStringMapString("market")
 
 	tmpl := template.Must(template.ParseFiles("resolver.tmpl"))
 
-	if err := os.MkdirAll(lang, os.ModePerm); err != nil {
-		panic(err)
-	}
-
-	itemGo, err := os.Create(fmt.Sprintf("%s/item.go", lang))
+	itemGo, err := os.Create("./item.go")
 	if err != nil {
 		panic(err)
 	}
 	defer itemGo.Close()
 	var itemBuf bytes.Buffer
 	if err := tmpl.Execute(&itemBuf, templateArg{
-		Pkg:           lang,
+		Pkg:           pkgName,
 		Type:          "Item",
 		CodeLocaleMap: item,
 	}); err != nil {
@@ -57,14 +53,14 @@ func main() {
 	}
 	itemGo.Write(itemFmt)
 
-	regionGo, err := os.Create(fmt.Sprintf("%s/region.go", lang))
+	regionGo, err := os.Create("./region.go")
 	if err != nil {
 		panic(err)
 	}
 	defer regionGo.Close()
 	var regionBuf bytes.Buffer
 	if err := tmpl.Execute(&regionBuf, templateArg{
-		Pkg:           lang,
+		Pkg:           pkgName,
 		Type:          "Region",
 		CodeLocaleMap: region,
 	}); err != nil {
@@ -76,14 +72,14 @@ func main() {
 	}
 	regionGo.Write(regionFmt)
 
-	marketGo, err := os.Create(fmt.Sprintf("%s/market.go", lang))
+	marketGo, err := os.Create("./market.go")
 	if err != nil {
 		panic(err)
 	}
 	defer marketGo.Close()
 	var marketBuf bytes.Buffer
 	if err := tmpl.Execute(&marketBuf, templateArg{
-		Pkg:           lang,
+		Pkg:           pkgName,
 		Type:          "Market",
 		CodeLocaleMap: market,
 	}); err != nil {

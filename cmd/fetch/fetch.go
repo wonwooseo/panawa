@@ -6,8 +6,8 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
+	"github.com/wonwooseo/panawa/pkg/code"
 	"github.com/wonwooseo/panawa/pkg/price"
 	"github.com/wonwooseo/panawa/pkg/price/kamis"
 )
@@ -19,10 +19,9 @@ func Command(baseLogger zerolog.Logger) *cobra.Command {
 		Long:  "fetch current date's data",
 		Run: func(cmd *cobra.Command, args []string) {
 			logger := baseLogger.With().Str("caller", "cmd/fetch").Logger()
-			logger.Info().Msg("not implemented")
 
-			apiURL := viper.GetString("api.kamis.url")
-			var priceFetcher price.DataClient = kamis.NewDataClient(baseLogger, apiURL)
+			var regionCodeResolver code.Resolver = code.NewRegionCodeResolver()
+			var priceFetcher price.DataClient = kamis.NewDataClient(baseLogger, regionCodeResolver)
 
 			datePrice, regionalMarketPrices, err := priceFetcher.GetDatePrices(context.Background(), time.Date(2024, 3, 20, 6, 0, 0, 0, time.UTC), "0000")
 			if err != nil {

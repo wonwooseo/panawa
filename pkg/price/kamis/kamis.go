@@ -13,24 +13,35 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 
+	"github.com/wonwooseo/panawa/pkg/code"
 	"github.com/wonwooseo/panawa/pkg/db/model"
 )
 
 type DataClient struct {
-	logger zerolog.Logger
-	client *http.Client
+	logger             zerolog.Logger
+	client             *http.Client
+	regionCodeResolver code.Resolver
 
-	apiURL string
+	apiURL     string
+	apiCertKey string
+	apiCertID  string
 }
 
-func NewDataClient(baseLogger zerolog.Logger, apiURL string) *DataClient {
+func NewDataClient(baseLogger zerolog.Logger, regionCodeResolver code.Resolver) *DataClient {
+	apiURL := viper.GetString("api.kamis.url")
+	apiCertKey := viper.GetString("api.kamis.key")
+	apiCertID := viper.GetString("api.kamis.id")
 	return &DataClient{
 		logger: baseLogger.With().Str("caller", "data/kamis").Logger(),
 		client: &http.Client{
 			Timeout: 60 * time.Second,
 		},
-		apiURL: apiURL,
+		regionCodeResolver: regionCodeResolver,
+		apiURL:             apiURL,
+		apiCertKey:         apiCertKey,
+		apiCertID:          apiCertID,
 	}
 }
 
@@ -54,8 +65,8 @@ func (c *DataClient) GetDatePrices(ctx context.Context, date time.Time, itemCode
 	query.Add("p_kindcode", productCodes.KindCode)
 	query.Add("p_productrankcode", productCodes.RankCode)
 	query.Add("p_convert_kg_yn", "N")
-	query.Add("p_cert_key", "111") // api 이용신청 후 변경
-	query.Add("p_cert_id", "222")  // api 이용신청 후 변경
+	query.Add("p_cert_key", c.apiCertKey)
+	query.Add("p_cert_id", c.apiCertID)
 	query.Add("p_returntype", "json")
 	reqURL.RawQuery = query.Encode()
 
@@ -100,7 +111,7 @@ func (c *DataClient) GetDatePrices(ctx context.Context, date time.Time, itemCode
 	tempDatePrice := tempPrice{Low: math.MaxInt, Sum: 0, High: 0, Count: 0}
 	tempRegionalMarketPrices := map[string]map[string]tempPrice{}
 	for _, price := range parsed.Data.Item {
-		regionCode, ok := regionCodeMap[price.CountyName.String()]
+		regionCode, ok := c.regionCodeResolver.LookupName(price.CountyName.String())
 		if !ok {
 			continue
 		}
