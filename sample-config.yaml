@@ -7,8 +7,8 @@ fetch:
 backfill:
   codes:
     - "0000"
-  startdate: "2024-03-17"
-  enddate: "2024-03-24"
+  startdate: "2024-04-06"
+  enddate: "2024-04-23"
 
 # data api info
 api:

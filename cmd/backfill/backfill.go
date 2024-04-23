@@ -2,6 +2,7 @@ package backfill
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -41,10 +42,12 @@ func Command(baseLogger zerolog.Logger) *cobra.Command {
 
 			fetchCodes := viper.GetStringSlice("backfill.codes")
 			for _, itemCode := range fetchCodes {
-				cDate := sDate
-				for cDate.Unix() <= eDate.Unix() {
+				for cDate := sDate; cDate.Unix() <= eDate.Unix(); cDate = cDate.AddDate(0, 0, 1) {
 					datePrice, regionalMarketPrices, err := priceFetcher.GetDatePrices(context.Background(), cDate, itemCode)
 					if err != nil {
+						if errors.Is(err, price.ErrPriceDataNotFound) {
+							continue
+						}
 						logger.Error().Str("item_code", itemCode).Err(err).Msg("failed to fetch price data")
 						return
 					}
@@ -61,7 +64,6 @@ func Command(baseLogger zerolog.Logger) *cobra.Command {
 					}
 
 					logger.Info().Str("item_code", itemCode).Str("date", cDate.Format("2006-01-02")).Msg("saved prices to DB")
-					cDate = cDate.AddDate(0, 0, 1)
 				}
 			}
 		},

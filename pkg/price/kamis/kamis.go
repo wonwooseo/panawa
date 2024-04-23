@@ -17,6 +17,7 @@ import (
 
 	"github.com/wonwooseo/panawa/pkg/code"
 	"github.com/wonwooseo/panawa/pkg/db/model"
+	"github.com/wonwooseo/panawa/pkg/price"
 )
 
 type DataClient struct {
@@ -85,19 +86,24 @@ func (c *DataClient) GetDatePrices(ctx context.Context, date time.Time, itemCode
 	if err != nil {
 		return nil, nil, err
 	}
-	parsed := apiResponse{}
-	if err := json.Unmarshal(respBytes, &parsed); err != nil {
+	unmarshaledResp := apiResponse{}
+	if err := json.Unmarshal(respBytes, &unmarshaledResp); err != nil {
 		return nil, nil, fmt.Errorf("%w: %s", err, string(respBytes))
 	}
+	parsed := unmarshaledResp.Data.KamisData()
+	if !parsed.Valid {
+		c.logger.Info().Any("response", unmarshaledResp).Msg("price data not found")
+		return nil, nil, price.ErrPriceDataNotFound
+	}
 
-	if parsed.Data.ErrorCode != statusSuccess {
-		switch parsed.Data.ErrorCode {
+	if parsed.ErrorCode != statusSuccess {
+		switch parsed.ErrorCode {
 		case statusUnauthenticated:
 			return nil, nil, fmt.Errorf("unauthenticated price data request")
 		case statusWrongParameters:
 			return nil, nil, fmt.Errorf("invalid price data request parameters")
 		default:
-			c.logger.Error().Any("response", parsed).Msg("unknown error code")
+			c.logger.Error().Any("parsed_response", parsed).Msg("unknown error code")
 			return nil, nil, fmt.Errorf("unknown error code from price data response")
 		}
 	}
@@ -110,7 +116,7 @@ func (c *DataClient) GetDatePrices(ctx context.Context, date time.Time, itemCode
 	}
 	tempDatePrice := tempPrice{Low: math.MaxInt, Sum: 0, High: 0, Count: 0}
 	tempRegionalMarketPrices := map[string]map[string]tempPrice{}
-	for _, price := range parsed.Data.Item {
+	for _, price := range parsed.Item {
 		regionCode, ok := c.regionCodeResolver.LookupName(price.CountyName.String())
 		if !ok {
 			continue
