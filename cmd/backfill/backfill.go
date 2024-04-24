@@ -17,10 +17,20 @@ import (
 )
 
 func Command(baseLogger zerolog.Logger) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "backfill",
 		Short: "backfill data",
 		Long:  "backfill data of previous dates",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			sDate, _ := cmd.Flags().GetString("backfill.startdate")
+			if sDate != "" {
+				viper.Set("backfill.startdate", sDate)
+			}
+			eDate, _ := cmd.Flags().GetString("backfill.enddate")
+			if eDate != "" {
+				viper.Set("backfill.enddate", eDate)
+			}
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			logger := baseLogger.With().Str("caller", "cmd/backfill").Logger()
 
@@ -31,12 +41,12 @@ func Command(baseLogger zerolog.Logger) *cobra.Command {
 			kstLoc := time.FixedZone("KST", 9*60*60) // UTC+09:00
 			sDate, err := time.ParseInLocation("2006-01-02", viper.GetString("backfill.startdate"), kstLoc)
 			if err != nil {
-				logger.Error().Err(err).Msg("failed to parse start date")
+				logger.Error().Err(err).Str("startdate", viper.GetString("backfill.startdate")).Msg("failed to parse start date")
 				return
 			}
 			eDate, err := time.ParseInLocation("2006-01-02", viper.GetString("backfill.enddate"), kstLoc)
 			if err != nil {
-				logger.Error().Err(err).Msg("failed to parse end date")
+				logger.Error().Err(err).Str("enddate", viper.GetString("backfill.enddate")).Msg("failed to parse end date")
 				return
 			}
 
@@ -68,4 +78,8 @@ func Command(baseLogger zerolog.Logger) *cobra.Command {
 			}
 		},
 	}
+	cmd.PersistentFlags().String("backfill.startdate", "", "start date of backfill")
+	cmd.PersistentFlags().String("backfill.enddate", "", "end date of backfill")
+
+	return cmd
 }
